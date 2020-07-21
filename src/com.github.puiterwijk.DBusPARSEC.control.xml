@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<node name="/">
+  <interface name="com.github.puiterwijk.DBusPARSEC.Control">
+    <method name="GetPublicKey">
+      <arg name="secret-type" type="s" direction="in"/>
+      <arg name="secret-group" type="s" direction="in"/>
+
+      <arg name="publickey" type="ay" direction="out"/>
+    </method>
+
+    <method name="StoreSecret">
+      <arg name="secret-type" type="s" direction="in"/>
+      <arg name="secret-group" type="s" direction="in"/>
+      <arg name="secret-name" type="s" direction="in"/>
+      <arg name="wrapper-key" type="ay" direction="in"/>
+      <arg name="secret-value" type="ay" direction="in"/>
+    </method>
+  </interface>
+</node>
