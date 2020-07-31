@@ -5,7 +5,6 @@ use parsec_client::core::interface::operations::psa_algorithm::{AsymmetricEncryp
 use parsec_client::core::interface::operations::psa_key_attributes::{
     Attributes, Lifetime, Policy, Type, UsageFlags,
 };
-use parsec_client::core::interface::requests::ProviderID;
 use parsec_client::BasicClient;
 
 use ring::aead::Aad;
@@ -21,15 +20,13 @@ mod networkmanager;
 
 #[derive(Debug)]
 pub struct Config {
-    provider: ProviderID,
     storagedir: path::PathBuf,
     uniquekeys: bool,
 }
 
 impl Config {
-    pub fn new(provider: ProviderID, storagedir: &str, uniquekeys: bool) -> Self {
+    pub fn new(storagedir: &str, uniquekeys: bool) -> Self {
         Config {
-            provider,
             storagedir: storagedir.to_string().into(),
             uniquekeys,
         }

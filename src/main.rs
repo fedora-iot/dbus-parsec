@@ -5,7 +5,6 @@ use dbus::tree::{Factory, Interface, MTFn};
 
 use parsec_client::auth::AuthenticationData;
 use parsec_client::core::interface::requests::Opcode;
-use parsec_client::core::interface::requests::ProviderID;
 use parsec_client::core::secrecy::Secret;
 use parsec_client::BasicClient;
 
@@ -71,8 +70,6 @@ fn register_to_nm_am(conn: &Connection) -> Result<(), dbus::Error> {
 }
 
 fn init_parsec() -> Result<BasicClient, Error> {
-    let used_provider = ProviderID::MbedCrypto;
-
     let app_name = String::from("dbus_parsec");
     let app_auth_data = AuthenticationData::AppIdentity(Secret::new(app_name));
     let mut client: BasicClient = BasicClient::new(app_auth_data);
@@ -82,7 +79,8 @@ fn init_parsec() -> Result<BasicClient, Error> {
     if providers.len() < 2 {
         return Err(Error::ParsecFeatureUnavailable("Any crypto provider"));
     }
-    let opcodes = client.list_opcodes(providers[0].id)?;
+    let used_provider = providers[0].id;
+    let opcodes = client.list_opcodes(used_provider)?;
     if !opcodes.contains(&Opcode::PsaSignHash) {
         return Err(Error::ParsecFeatureUnavailable("PsaSignHash"));
     }
@@ -142,7 +140,7 @@ impl std::fmt::Display for Error {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = init_parsec()?;
     // TODO
-    let config = Config::new(ProviderID::MbedCrypto, "/tmp/dbus-parsec", true);
+    let config = Config::new("/tmp/dbus-parsec", true);
     let agent = Agent::new(config, client);
     run_dbus(agent)?;
     Ok(())
