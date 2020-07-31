@@ -8,7 +8,6 @@ edition = "2018"
 dbus = "0.8.4"
 dbus-crossroads = "0.2.1"
 parsec-client = { version = "0.7.1", features = ["no-fs-permission-check"] }
-uuid = "0.7.4"
 ring = "0.16.15"
 
 [build-dependencies]

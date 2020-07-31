@@ -9,8 +9,6 @@ use parsec_client::core::interface::requests::ProviderID;
 use parsec_client::core::secrecy::Secret;
 use parsec_client::BasicClient;
 
-use uuid::Uuid;
-
 mod agent;
 
 mod nm_secretagent {
@@ -73,7 +71,6 @@ fn register_to_nm_am(conn: &Connection) -> Result<(), dbus::Error> {
 }
 
 fn init_parsec() -> Result<BasicClient, Error> {
-    let tpmuuid = Uuid::parse_str("1e4954a4-ff21-46d3-ab0c-661eeb667e1d").unwrap();
     let used_provider = ProviderID::MbedCrypto;
 
     let app_name = String::from("dbus_parsec");
@@ -81,16 +78,11 @@ fn init_parsec() -> Result<BasicClient, Error> {
     let mut client: BasicClient = BasicClient::new(app_auth_data);
 
     client.ping()?;
-    if client
-        .list_providers()?
-        .iter()
-        .filter(|p| p.uuid == tpmuuid)
-        .count()
-        == 0
-    {
-        //return Err(Error::ParsecFeatureUnavailable("TPM Provider"));
+    let providers = client.list_providers()?;
+    if providers.len() < 2 {
+        return Err(Error::ParsecFeatureUnavailable("Any crypto provider"));
     }
-    let opcodes = client.list_opcodes(used_provider)?;
+    let opcodes = client.list_opcodes(providers[0].id)?;
     if !opcodes.contains(&Opcode::PsaSignHash) {
         return Err(Error::ParsecFeatureUnavailable("PsaSignHash"));
     }
