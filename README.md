@@ -4,11 +4,11 @@ DBus PARSEC interface
 This project implements a DBus service that can store/retrieve secrets that are
 encrypted with [PARSEC](https://github.com/parallaxsecond/parsec) keys.
 
-* THIS PROJECT IS STILL IN DEVELOPMENT *
+* THIS PROJECT IS STILL IN DEVELOPMENT
 
 ## TODOs
 
-* [] Configuration
+* [ ] Configuration
 
 ## Implemented interfaces
 
