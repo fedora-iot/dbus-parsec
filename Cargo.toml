@@ -1,13 +1,13 @@
 [package]
 name = "dbus-parsec"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Patrick Uiterwijk <patrick@puiterwijk.org>"]
 edition = "2018"
 
 [dependencies]
 dbus = "0.8.4"
 dbus-crossroads = "0.2.1"
-parsec-client = { version = "0.8.0", features = ["no-fs-permission-check"] }
+parsec-client = "0.9.0"
 ring = "0.16.15"
 
 [build-dependencies]

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::env;
+
 use dbus::ffidisp::{Connection, NameFlag};
 use dbus::message::Message;
 use dbus::tree;
@@ -114,6 +116,7 @@ fn init_parsec() -> Result<BasicClient, Error> {
 
 #[derive(Debug)]
 enum Error {
+    Configuration(&'static str),
     ParsecClient(parsec_client::error::Error),
     ParsecFeatureUnavailable(&'static str),
     DBus(dbus::Error),
@@ -136,6 +139,9 @@ impl std::error::Error for Error {}
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
+            Error::Configuration(msg) => {
+                write!(f, "Configuration error: {}", msg)
+            }
             Error::ParsecFeatureUnavailable(feature) => {
                 write!(f, "PARSEC feature unavailable: {}", feature)
             }
@@ -151,10 +157,19 @@ impl std::fmt::Display for Error {
     }
 }
 
+fn get_config() -> Result<Config, Error> {
+    let unique_keys = env::var("NO_UNIQUE_KEYS").is_err();
+    let storage_dir = match env::var("STORAGE_DIR") {
+        Ok(dir) => dir,
+        Err(_) => return Err(Error::Configuration("No STORAGE_DIR provided")),
+    };
+
+    Ok(Config::new(&storage_dir, unique_keys))
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = init_parsec()?;
-    // TODO
-    let config = Config::new("/tmp/dbus-parsec", true);
+    let config = get_config()?;
     let agent = Agent::new(config, client);
     run_dbus(agent)?;
     Ok(())
