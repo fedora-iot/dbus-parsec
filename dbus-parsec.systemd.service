@@ -1,0 +1,11 @@
+[Unit]
+Description=PARSEC-encrypted DBus secrets daemon
+
+[Service]
+ExecStart=/usr/bin/dbus-parsec
+Type=dbus
+BusName=com.github.puiterwijk.dbus_parsec
+Environment=STORAGE_DIR=/var/lib/dbus-parsec
+
+[Install]
+WantedBy=multi-user.target
