@@ -27,7 +27,7 @@ if len(sys.argv) != 4:
     raise Exception(
         "Usage: %s <secret-type> <secret-group> <secret-name>" % sys.argv[0])
 secret_type, secret_group, secret_name = sys.argv[1:4]
-secret = sys.stdin.buffer.read()[:-1]
+secret = sys.stdin.buffer.read().strip()
 
 print("Setting secret %s-%s-%s to %s" %
       (secret_type, secret_group, secret_name, secret))
