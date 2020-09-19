@@ -1,14 +1,27 @@
 [package]
 name = "dbus-parsec"
-version = "0.2.2"
+version = "0.3.0"
 authors = ["Patrick Uiterwijk <patrick@puiterwijk.org>"]
 edition = "2018"
+
+[[bin]]
+name = "dbus-parsec"
+path = "src/daemon.rs"
+
+[[bin]]
+name = "dbus-parsec-control"
+path = "src/utility.rs"
 
 [dependencies]
 dbus = "0.8.4"
 dbus-crossroads = "0.2.1"
-parsec-client = "0.9.0"
-ring = "0.16.15"
+parsec-client = { version = "0.9.0", features = ["no-fs-permission-check"] }
+ring = { version = "0.16.15", features = ["std"] }
+anyhow = "1.0.32"
+rsa = "0.3.0"
+sha2 = "0.9.1"
+hex = "0.4.0"
+rand = "0.7.3"
 
 [build-dependencies]
 dbus-codegen = "0.5.0"

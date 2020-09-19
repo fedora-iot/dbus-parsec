@@ -18,12 +18,12 @@ use std::os::unix::fs::PermissionsExt;
 
 use dbus::tree::MethodErr;
 
-use crate::dbus_parsec_control;
+use crate::dbus_parsec_control_server;
 
 use super::Agent;
 use super::KeyType;
 
-impl dbus_parsec_control::ComGithubPuiterwijkDBusPARSECControl for Agent {
+impl dbus_parsec_control_server::ComGithubPuiterwijkDBusPARSECControl for Agent {
     fn get_public_key(&self, secret_type: &str, secret_group: &str) -> Result<Vec<u8>, MethodErr> {
         let key_name = match KeyType::from_type(secret_type) {
             None => {

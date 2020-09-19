@@ -25,13 +25,18 @@ use parsec_client::core::secrecy::Secret;
 use parsec_client::BasicClient;
 
 mod agent;
+mod utils;
 
 mod nm_secretagent {
     include!(concat!(env!("OUT_DIR"), "/nm_secretagent.rs"));
 }
 
-mod dbus_parsec_control {
-    include!(concat!(env!("OUT_DIR"), "/dbus_parsec_control.rs"));
+mod dbus_parsec_control_server {
+    include!(concat!(env!("OUT_DIR"), "/dbus_parsec_control_server.rs"));
+}
+
+mod dbus_parsec_control_client {
+    include!(concat!(env!("OUT_DIR"), "/dbus_parsec_control_client.rs"));
 }
 
 use agent::{Agent, Config};
@@ -57,7 +62,7 @@ fn create_nm_sa_iface() -> Interface<MTFn<TData>, TData> {
 
 fn create_dbus_parsec_control_iface() -> Interface<MTFn<TData>, TData> {
     let f = tree::Factory::new_fn();
-    dbus_parsec_control::com_github_puiterwijk_dbus_parseccontrol_server(&f, (), |m| {
+    dbus_parsec_control_server::com_github_puiterwijk_dbus_parseccontrol_server(&f, (), |m| {
         let a: &Agent = m.tree.get_data();
         a
     })

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::path;
 use std::fs;
+use std::path;
 
 use parsec_client::core::interface::operations::psa_algorithm::{AsymmetricEncryption, Hash};
 use parsec_client::core::interface::operations::psa_key_attributes::{
@@ -21,9 +21,11 @@ use parsec_client::core::interface::operations::psa_key_attributes::{
 };
 use parsec_client::BasicClient;
 
+use crate::utils;
+
 use ring::aead::Aad;
-use ring::aead::LessSafeKey;
-use ring::aead::Nonce;
+use ring::aead::BoundKey;
+use ring::aead::OpeningKey;
 use ring::aead::UnboundKey;
 use ring::aead::AES_256_GCM;
 
@@ -162,17 +164,23 @@ impl Agent {
         Ok(())
     }
 
-    fn retrieve_secret(&self, secret_type: &KeyType, secret_group: &str, secret_name: &str) -> Option<Vec<u8>> {
-        let (wrapkey_path, contents_path) = match self.get_secret_file_paths(secret_type, secret_group, secret_name) {
-            Ok(res) => res,
-            Err(_) => return None,
-        };
+    fn retrieve_secret(
+        &self,
+        secret_type: &KeyType,
+        secret_group: &str,
+        secret_name: &str,
+    ) -> Option<Vec<u8>> {
+        let (wrapkey_path, contents_path) =
+            match self.get_secret_file_paths(secret_type, secret_group, secret_name) {
+                Ok(res) => res,
+                Err(_) => return None,
+            };
         let wrapkey = match fs::read(&wrapkey_path) {
             Ok(res) => res,
             Err(err) => {
                 eprintln!("Error reading wrapkey {:?}: {}", wrapkey_path, err);
                 return None;
-            },
+            }
         };
         let contents = match fs::read(&contents_path) {
             Ok(res) => res,
@@ -197,7 +205,7 @@ impl Agent {
             hash_alg: Hash::Sha256,
         };
 
-        let plain_wrapper =
+        let wrapkey =
             match self
                 .parsec_client
                 .psa_asymmetric_decrypt(key_name, asym_enc_algo, wrapkey, None)
@@ -212,17 +220,7 @@ impl Agent {
         let aad = format!("{};{};{}", secret_type.to_type(), secret_group, secret_name);
         let aad = Aad::from(aad);
 
-        let nonce = &plain_wrapper[0..12];
-        let plain_wrapkey = &plain_wrapper[12..];
-
-        let nonce = match Nonce::try_assume_unique_for_key(nonce) {
-            Ok(nonce) => nonce,
-            Err(err) => {
-                eprintln!("Nonce not assumed unique: {}", err);
-                return None;
-            }
-        };
-        let plain_wrapkey = match UnboundKey::new(&AES_256_GCM, &plain_wrapkey) {
+        let wrapkey = match UnboundKey::new(&AES_256_GCM, &wrapkey) {
             Ok(key) => key,
             Err(err) => {
                 eprintln!("Wrapkey invalid: {}", err);
@@ -232,9 +230,10 @@ impl Agent {
 
         let mut in_out = value.to_vec();
 
-        let wrapkey = LessSafeKey::new(plain_wrapkey);
+        let mut wrapkey: OpeningKey<utils::CounterNonce> =
+            BoundKey::new(wrapkey, utils::CounterNonce::new());
 
-        let plaintext = match wrapkey.open_in_place(nonce, aad, &mut in_out) {
+        let plaintext = match wrapkey.open_in_place(aad, &mut in_out) {
             Ok(pt) => pt,
             Err(err) => {
                 eprintln!("Error decrypting inner contents: {}", err);
