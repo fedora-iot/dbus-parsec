@@ -51,7 +51,9 @@ enum NetworkManagerConnectionType<'a> {
 impl<'a> NetworkManagerConnectionType<'a> {
     fn get_applicable_secrets(&self) -> Option<&[&'static str]> {
         match self {
-            NetworkManagerConnectionType::Vpn(vpntype) => networkmanager_vpn_applicable_secrets(vpntype),
+            NetworkManagerConnectionType::Vpn(vpntype) => {
+                networkmanager_vpn_applicable_secrets(vpntype)
+            }
             NetworkManagerConnectionType::Wireguard => Some(&["private-key"]),
         }
     }
@@ -80,7 +82,9 @@ impl<'a> NMConnectionInfo<'a> for &NMConnection<'a> {
 
     fn get_conn_type(&'a self) -> Option<NetworkManagerConnectionType<'a>> {
         match self.get("connection")?.get("type")?.0.as_str()? {
-            "vpn" => Some(NetworkManagerConnectionType::Vpn(self.get("vpn")?.get("service-type")?.0.as_str()?)),
+            "vpn" => Some(NetworkManagerConnectionType::Vpn(
+                self.get("vpn")?.get("service-type")?.0.as_str()?,
+            )),
             "wireguard" => Some(NetworkManagerConnectionType::Wireguard),
             _ => None,
         }
@@ -148,7 +152,11 @@ impl nm_secretagent::OrgFreedesktopNetworkManagerSecretAgent for Agent {
         };
         let conn_type = match connection.get_conn_type() {
             Some(ctype) => ctype,
-            None => return Err(MethodErr::failed("Invalid connection object: unrecognized connection type")),
+            None => {
+                return Err(MethodErr::failed(
+                    "Invalid connection object: unrecognized connection type",
+                ))
+            }
         };
 
         let secret_names = match conn_type.get_applicable_secrets() {
@@ -158,7 +166,12 @@ impl nm_secretagent::OrgFreedesktopNetworkManagerSecretAgent for Agent {
 
         let secret_values: NMSecretValues = secret_names
             .iter()
-            .map(|secret_name| (*secret_name, self.retrieve_secret(&KeyType::NetworkManager, conn_name, secret_name)))
+            .map(|secret_name| {
+                (
+                    *secret_name,
+                    self.retrieve_secret(&KeyType::NetworkManager, conn_name, secret_name),
+                )
+            })
             .filter(|x| x.1.is_some())
             .map(|x| (x.0.to_string(), String::from_utf8(x.1.unwrap())))
             .filter(|x| x.1.is_ok())
