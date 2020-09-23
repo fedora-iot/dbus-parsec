@@ -1,6 +1,7 @@
 [Unit]
 Description=PARSEC-encrypted DBus secrets daemon
 Wants=parsec.service
+Requires=parsec.service
 
 [Service]
 ExecStart=/usr/libexec/dbus-parsec
