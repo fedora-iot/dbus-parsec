@@ -1,6 +1,6 @@
 [Unit]
 Description=PARSEC-encrypted DBus secrets daemon
-Wants=parsec.service
+After=parsec.service
 Requires=parsec.service
 
 [Service]
@@ -8,6 +8,8 @@ ExecStart=/usr/libexec/dbus-parsec
 Type=dbus
 BusName=com.github.puiterwijk.dbus_parsec
 Environment=STORAGE_DIR=/var/lib/dbus-parsec
+Restart=on-failure
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
