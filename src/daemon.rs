@@ -19,7 +19,6 @@ use dbus::message::Message;
 use dbus::tree;
 use dbus::tree::{Factory, Interface, MTFn};
 
-use parsec_client::auth::AuthenticationData;
 use parsec_client::core::interface::requests::Opcode;
 use parsec_client::core::secrecy::Secret;
 use parsec_client::BasicClient;
@@ -92,8 +91,7 @@ fn register_to_nm_am(conn: &Connection) -> Result<(), dbus::Error> {
 
 fn init_parsec() -> Result<BasicClient, Error> {
     let app_name = String::from("dbus_parsec");
-    let app_auth_data = AuthenticationData::AppIdentity(Secret::new(app_name));
-    let mut client: BasicClient = BasicClient::new(app_auth_data);
+    let mut client: BasicClient = BasicClient::new(Some(app_name))?;
 
     client.ping()?;
     let providers = client.list_providers()?;
