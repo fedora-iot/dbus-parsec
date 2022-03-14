@@ -3,7 +3,8 @@ static DBUS_NAME: &str = "com.github.puiterwijk.dbus_parsec";
 
 use anyhow::{ensure, Context, Result};
 
-use rsa::{PaddingScheme, PublicKey, RSAPublicKey};
+use pkcs1::FromRsaPublicKey;
+use rsa::{PaddingScheme, PublicKey, RsaPublicKey};
 
 use rand::rngs::OsRng;
 
@@ -75,7 +76,7 @@ fn main() -> Result<()> {
             )
         })?;
     println!("Public key sha256: {}", sha256_hex(&pubkey));
-    let pubkey = RSAPublicKey::from_pkcs1(&pubkey)
+    let pubkey = RsaPublicKey::from_pkcs1_der(&pubkey)
         .with_context(|| "Unable to parse retrieved public key")?;
 
     // Generate a wrapper key
