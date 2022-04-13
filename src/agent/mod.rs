@@ -15,21 +15,12 @@
 use std::fs;
 use std::path;
 
+use anyhow::{bail, Context, Result};
 use parsec_client::core::interface::operations::psa_algorithm::{AsymmetricEncryption, Hash};
 use parsec_client::core::interface::operations::psa_key_attributes::{
     Attributes, Lifetime, Policy, Type, UsageFlags,
 };
 use parsec_client::BasicClient;
-
-use crate::utils;
-
-use ring::aead::Aad;
-use ring::aead::BoundKey;
-use ring::aead::OpeningKey;
-use ring::aead::UnboundKey;
-use ring::aead::AES_256_GCM;
-
-use dbus::tree::MethodErr;
 
 mod control;
 mod networkmanager;
@@ -108,9 +99,9 @@ impl Agent {
         secret_type: &KeyType,
         secret_group: &str,
         secret_name: &str,
-    ) -> Result<(path::PathBuf, path::PathBuf), MethodErr> {
+    ) -> Result<(path::PathBuf, path::PathBuf)> {
         if !is_valid_identifier(secret_group) || !is_valid_identifier(secret_name) {
-            Err(MethodErr::failed("Invalid secret identifiers"))
+            bail!("Invalid secret identifiers");
         } else {
             let file_base = format!(
                 "secret{}{}{}{}{}{}",
@@ -169,27 +160,14 @@ impl Agent {
         secret_type: &KeyType,
         secret_group: &str,
         secret_name: &str,
-    ) -> Option<Vec<u8>> {
-        let (wrapkey_path, contents_path) =
-            match self.get_secret_file_paths(secret_type, secret_group, secret_name) {
-                Ok(res) => res,
-                Err(_) => return None,
-            };
-        let wrapkey = match fs::read(&wrapkey_path) {
-            Ok(res) => res,
-            Err(err) => {
-                eprintln!("Error reading wrapkey {:?}: {}", wrapkey_path, err);
-                return None;
-            }
-        };
-        let contents = match fs::read(&contents_path) {
-            Ok(res) => res,
-            Err(err) => {
-                eprintln!("Error reading contents {:?}: {}", contents_path, err);
-                return None;
-            }
-        };
+    ) -> Result<Vec<u8>> {
+        let (wrapkey_path, contents_path) = self
+            .get_secret_file_paths(secret_type, secret_group, secret_name)
+            .context("Error determining secret file path")?;
+        let wrapkey = fs::read(&wrapkey_path).context("Error reading wrapkey")?;
+        let contents = fs::read(&contents_path).context("Error reading secret contents")?;
         self.decrypt_secret(secret_type, secret_group, secret_name, &wrapkey, &contents)
+            .context("Error decrypting secret")
     }
 
     fn decrypt_secret(
@@ -199,48 +177,24 @@ impl Agent {
         secret_name: &str,
         wrapkey: &[u8],
         value: &[u8],
-    ) -> Option<Vec<u8>> {
+    ) -> Result<Vec<u8>> {
         let key_name = self.key_name(secret_type, secret_group);
         let asym_enc_algo = AsymmetricEncryption::RsaOaep {
             hash_alg: Hash::Sha256,
         };
 
-        let wrapkey =
-            match self
-                .parsec_client
-                .psa_asymmetric_decrypt(key_name, asym_enc_algo, wrapkey, None)
-            {
-                Ok(key) => key,
-                Err(err) => {
-                    eprintln!("Error decrypting wrapper key: {}", err);
-                    return None;
-                }
-            };
+        let wrapkey = self
+            .parsec_client
+            .psa_asymmetric_decrypt(key_name, asym_enc_algo, wrapkey, None)
+            .context("Error decrypting wrapkey")?;
 
-        let aad = format!("{};{};{}", secret_type.to_type(), secret_group, secret_name);
-        let aad = Aad::from(aad);
-
-        let wrapkey = match UnboundKey::new(&AES_256_GCM, &wrapkey) {
-            Ok(key) => key,
-            Err(err) => {
-                eprintln!("Wrapkey invalid: {}", err);
-                return None;
-            }
-        };
-
-        let mut in_out = value.to_vec();
-
-        let mut wrapkey: OpeningKey<utils::CounterNonce> =
-            BoundKey::new(wrapkey, utils::CounterNonce::new());
-
-        let plaintext = match wrapkey.open_in_place(aad, &mut in_out) {
-            Ok(pt) => pt,
-            Err(err) => {
-                eprintln!("Error decrypting inner contents: {}", err);
-                return None;
-            }
-        };
-
-        Some(plaintext.to_vec())
+        crate::crypto::decrypt_secret(
+            wrapkey,
+            &secret_type.to_type(),
+            secret_group,
+            secret_name,
+            value,
+        )
+        .context("Error decrypting secret")
     }
 }
