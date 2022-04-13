@@ -3,15 +3,10 @@ static DBUS_NAME: &str = "com.github.puiterwijk.dbus_parsec";
 
 use anyhow::{ensure, Context, Result};
 
-use pkcs1::DecodeRsaPublicKey;
-use rsa::{Oaep, RsaPublicKey};
-
-use rand::rngs::OsRng;
-
-use ring::aead;
-use ring::rand::{SecureRandom, SystemRandom};
-
-use sha2::{Digest, Sha256};
+use openssl::{
+    hash::{hash, MessageDigest},
+    rsa::Rsa,
+};
 
 use std::env;
 use std::io::{self, Read};
@@ -21,17 +16,15 @@ use std::time::Duration;
 
 use dbus_parsec_control::ComGithubPuiterwijkDBusPARSECControl;
 
-mod utils;
-
+mod crypto;
 mod dbus_parsec_control {
     include!(concat!(env!("OUT_DIR"), "/dbus_parsec_control_client.rs"));
 }
 
-fn sha256_hex(inp: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(inp);
-    let result = hasher.finalize();
-    hex::encode(result)
+fn sha256_hex(inp: &[u8]) -> Result<String> {
+    hash(MessageDigest::sha256(), inp)
+        .context("Error computing sha256")
+        .map(hex::encode)
 }
 
 fn read_input_token() -> Result<String> {
@@ -53,7 +46,7 @@ fn main() -> Result<()> {
     );
     let (secret_type, secret_group, secret_name) = (&args[2], &args[3], &args[4]);
     let secret = read_input_token().with_context(|| "Error getting secret contents")?;
-    let mut secret = secret.into_bytes();
+    let secret = secret.into_bytes();
 
     let conn = Connection::new_system().with_context(|| "Unable to connect to DBus System Bus")?;
     let proxy = conn.with_proxy(
@@ -61,10 +54,6 @@ fn main() -> Result<()> {
         DBUS_PARSEC_CONTROL_OBJ_PATH,
         Duration::from_millis(5000),
     );
-
-    // We need multiple random sources...
-    let sysrand = SystemRandom::new();
-    let mut rsarand = OsRng;
 
     // Let's get the pubkey first, so we know the control interface is reachable
     let pubkey = proxy
@@ -75,33 +64,13 @@ fn main() -> Result<()> {
                 &secret_type, &secret_group
             )
         })?;
-    println!("Public key sha256: {}", sha256_hex(&pubkey));
-    let pubkey = RsaPublicKey::from_pkcs1_der(&pubkey)
-        .with_context(|| "Unable to parse retrieved public key")?;
 
-    // Generate a wrapper key
-    let mut wrapkey: [u8; 32] = [0; 32];
-    sysrand
-        .fill(&mut wrapkey)
-        .with_context(|| "Unable to generate random wrapper key")?;
-    let wrapkey = wrapkey;
-    println!("Wrapper key sha256: {}", sha256_hex(&wrapkey));
+    println!("Public key sha256: {}", sha256_hex(&pubkey)?);
+    let pubkey = Rsa::public_key_from_der_pkcs1(&pubkey).context("Unable to parse public key")?;
 
-    // Encrypt the wrapper key
-    let wrapped_wrapkey = pubkey
-        .encrypt(&mut rsarand, Oaep::new::<Sha256>(), &wrapkey)
-        .with_context(|| "Unable to encrypt wrapper key")?;
-
-    // Encrypt the secret
-    let wrapkey = aead::UnboundKey::new(&aead::AES_256_GCM, &wrapkey)
-        .with_context(|| "Unable to generate UnboundKey")?;
-    let mut wrapkey: aead::SealingKey<utils::CounterNonce> =
-        aead::BoundKey::new(wrapkey, utils::CounterNonce::new());
-    let aad = format!("{};{};{}", &secret_type, &secret_group, &secret_name);
-    let aad = aead::Aad::from(&aad);
-    wrapkey
-        .seal_in_place_append_tag(aad, &mut secret)
-        .with_context(|| "Unable to seal with generated wrapkey")?;
+    let encrypt_result =
+        crate::crypto::encrypt_secret(&pubkey, &secret_type, &secret_group, &secret_name, secret)
+            .context("Error encrypting secret")?;
 
     // Store the secret finally
     proxy
@@ -109,8 +78,8 @@ fn main() -> Result<()> {
             secret_type,
             secret_group,
             secret_name,
-            wrapped_wrapkey,
-            secret,
+            encrypt_result.wrapped_wrapkey,
+            encrypt_result.secret,
         )
         .with_context(|| format!("Failed to store secret {}", &secret_name))?;
 

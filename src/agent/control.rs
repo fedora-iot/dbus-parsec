@@ -79,20 +79,19 @@ impl dbus_parsec_control_server::ComGithubPuiterwijkDBusPARSECControl for Agent 
             }
             Some(key_id) => key_id,
         };
-        let (wrapkey_path, contents_path) =
-            self.get_secret_file_paths(&secret_type, secret_group, secret_name)?;
+        let (wrapkey_path, contents_path) = self
+            .get_secret_file_paths(&secret_type, secret_group, secret_name)
+            .map_err(|e| MethodErr::failed(&format!("{}", e)))?;
 
         // Try to decrypt the secret to ensure we're not being passed nonsense
-        match self.decrypt_secret(
+        self.decrypt_secret(
             &secret_type,
             secret_group,
             secret_name,
             &wrapper_key,
             &secret_value,
-        ) {
-            Some(_) => {}
-            None => return Err(MethodErr::failed("Unable to decrypt secret")),
-        };
+        )
+        .map_err(|_| MethodErr::failed("Unable to decrypt secret"))?;
 
         let err_failed = MethodErr::failed("Unable to write secret");
 

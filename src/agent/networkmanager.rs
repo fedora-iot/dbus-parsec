@@ -208,7 +208,7 @@ impl nm_secretagent::OrgFreedesktopNetworkManagerSecretAgent for Agent {
                     self.retrieve_secret(&KeyType::NetworkManager, conn_name, secret_name),
                 )
             })
-            .filter(|x| x.1.is_some())
+            .filter(|x| x.1.is_ok())
             .map(|x| (x.0.to_string(), String::from_utf8(x.1.unwrap())))
             .filter(|x| x.1.is_ok())
             .map(|x| (x.0, str_refarg(x.1.unwrap())))
