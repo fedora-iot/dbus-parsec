@@ -20,11 +20,10 @@ use dbus::tree;
 use dbus::tree::{Factory, Interface, MTFn};
 
 use parsec_client::core::interface::requests::Opcode;
-use parsec_client::core::secrecy::Secret;
 use parsec_client::BasicClient;
 
 mod agent;
-mod utils;
+mod crypto;
 
 mod nm_secretagent {
     include!(concat!(env!("OUT_DIR"), "/nm_secretagent.rs"));
