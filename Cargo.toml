@@ -15,7 +15,7 @@ path = "src/utility.rs"
 [dependencies]
 dbus = "0.8.4"
 dbus-crossroads = "0.2.1"
-parsec-client = "0.11.0"
+parsec-client = "0.14.1"
 ring = { version = "0.16.15", features = ["std"] }
 anyhow = "1.0.32"
 rsa = "0.5.0"

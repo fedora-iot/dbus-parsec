@@ -137,29 +137,20 @@ impl Agent {
             hash_alg: Hash::Sha256,
         };
 
+        let mut usage_flags = UsageFlags::default();
+        usage_flags.set_encrypt().set_decrypt();
+
         let key_attrs = Attributes {
             lifetime: Lifetime::Persistent,
             key_type: Type::RsaKeyPair,
             bits: 2048,
             policy: Policy {
-                usage_flags: UsageFlags {
-                    export: false,
-                    copy: false,
-                    cache: false,
-                    encrypt: true,
-                    decrypt: true,
-                    sign_message: false,
-                    verify_message: false,
-                    sign_hash: false,
-                    verify_hash: false,
-                    derive: false,
-                },
+                usage_flags: usage_flags,
                 permitted_algorithms: asym_enc_algo.into(),
             },
         };
 
-        self.parsec_client
-            .psa_generate_key(key_name.to_string(), key_attrs)?;
+        self.parsec_client.psa_generate_key(key_name, key_attrs)?;
 
         Ok(())
     }
@@ -208,7 +199,7 @@ impl Agent {
         let wrapkey =
             match self
                 .parsec_client
-                .psa_asymmetric_decrypt(key_name, asym_enc_algo, wrapkey, None)
+                .psa_asymmetric_decrypt(&key_name, asym_enc_algo, wrapkey, None)
             {
                 Ok(key) => key,
                 Err(err) => {

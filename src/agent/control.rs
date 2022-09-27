@@ -35,7 +35,7 @@ impl dbus_parsec_control_server::ComGithubPuiterwijkDBusPARSECControl for Agent 
             Some(key_id) => self.key_name(&key_id, secret_group),
         };
 
-        match self.parsec_client.psa_export_public_key(key_name.clone()) {
+        match self.parsec_client.psa_export_public_key(&key_name) {
             Ok(key) => Ok(key),
             Err(parsec_client::error::Error::Service(
                 parsec_client::core::interface::requests::ResponseStatus::PsaErrorDoesNotExist,
@@ -45,7 +45,7 @@ impl dbus_parsec_control_server::ComGithubPuiterwijkDBusPARSECControl for Agent 
                 match self.create_key(&key_name) {
                     Ok(_) => self
                         .parsec_client
-                        .psa_export_public_key(key_name.clone())
+                        .psa_export_public_key(&key_name)
                         .map_err(|err| {
                             MethodErr::failed(&format!(
                                 "Unexpected error getting key after creating: {}",

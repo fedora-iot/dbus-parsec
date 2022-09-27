@@ -111,9 +111,16 @@ impl<'a> NMConnectionInfo<'a> for &NMConnection<'a> {
                 self.get("vpn")?.get("service-type")?.0.as_str()?,
             )),
             "wireguard" => Some(NetworkManagerConnectionType::Wireguard),
-            "802-11-wireless" => match self.get("802-11-wireless-security")?.get("key-mgmt")?.0.as_str()? {
+            "802-11-wireless" => match self
+                .get("802-11-wireless-security")?
+                .get("key-mgmt")?
+                .0
+                .as_str()?
+            {
                 "wpa-psk" => Some(NetworkManagerConnectionType::Wireless(NMWirelessType::PSK)),
-                _ => Some(NetworkManagerConnectionType::Wireless(NMWirelessType::Enterprise)),
+                _ => Some(NetworkManagerConnectionType::Wireless(
+                    NMWirelessType::Enterprise,
+                )),
             },
             _ => None,
         }
