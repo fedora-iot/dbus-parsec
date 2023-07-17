@@ -3,8 +3,8 @@ static DBUS_NAME: &str = "com.github.puiterwijk.dbus_parsec";
 
 use anyhow::{ensure, Context, Result};
 
-use pkcs1::FromRsaPublicKey;
-use rsa::{PaddingScheme, PublicKey, RsaPublicKey};
+use pkcs1::DecodeRsaPublicKey;
+use rsa::{Oaep, RsaPublicKey};
 
 use rand::rngs::OsRng;
 
@@ -89,7 +89,7 @@ fn main() -> Result<()> {
 
     // Encrypt the wrapper key
     let wrapped_wrapkey = pubkey
-        .encrypt(&mut rsarand, PaddingScheme::new_oaep::<Sha256>(), &wrapkey)
+        .encrypt(&mut rsarand, Oaep::new::<Sha256>(), &wrapkey)
         .with_context(|| "Unable to encrypt wrapper key")?;
 
     // Encrypt the secret
