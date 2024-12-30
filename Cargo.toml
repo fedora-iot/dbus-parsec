@@ -14,7 +14,7 @@ path = "src/utility.rs"
 
 [dependencies]
 dbus = "0.8.4"
-parsec-client = "0.14.1"
+parsec-client = "0.16.0"
 anyhow = "1.0.32"
 openssl = "0.10"
 hex = "0.4.0"
